@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mpack — Админ-панель</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f3f3f3;
+            padding: 30px 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 500;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .card h2 {
+            font-size: 1.2rem;
+            margin-bottom: 16px;
+            color: #1a1a1a;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 8px;
+        }
+        .card h3 {
+            font-size: 1rem;
+            margin: 15px 0 10px 0;
+            color: #0078d7;
+        }
+        pre {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.8rem;
+            font-family: 'Consolas', monospace;
+            margin: 10px 0;
+        }
+        code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.85rem;
+        }
+        .step {
+            margin: 15px 0;
+            padding-left: 20px;
+            border-left: 3px solid #0078d7;
+        }
+        .warning {
+            background: #fff3e0;
+            border-left: 3px solid #ff9800;
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 6px;
+        }
+        button {
+            background: #0078d7;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #106ebe;
+        }
+        .logout-btn {
+            background: #6c6c6c;
+            margin-left: 10px;
+        }
+        .login-box {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 400px;
+            margin: 100px auto;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .login-box input {
+            width: 100%;
+            padding: 12px;
+            margin: 15px 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+        .login-box input:focus {
+            outline: none;
+            border-color: #0078d7;
+        }
+        .error {
+            color: #d32f2f;
+            margin-top: 10px;
+        }
+        .success {
+            color: #2e7d32;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        td, th {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div id="adminApp"></div>
+
+    <script>
+        const PASSWORD = "104423315";
+        
+        function checkAuth() {
+            return sessionStorage.getItem('adminAuth') === 'true';
+        }
+        
+        function login() {
+            const container = document.getElementById('adminApp');
+            container.innerHTML = `
+                <div class="login-box">
+                    <h2>🔐 Вход в админ-панель</h2>
+                    <input type="password" id="passwordInput" placeholder="Введите пароль" autofocus>
+                    <button id="loginBtn">Войти</button>
+                    <div id="loginError" class="error"></div>
+                </div>
+            `;
+            
+            document.getElementById('loginBtn').addEventListener('click', () => {
+                const inputPass = document.getElementById('passwordInput').value;
+                if (inputPass === PASSWORD) {
+                    sessionStorage.setItem('adminAuth', 'true');
+                    renderAdminPanel();
+                } else {
+                    document.getElementById('loginError').textContent = '❌ Неверный пароль!';
+                }
+            });
+            
+            document.getElementById('passwordInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    document.getElementById('loginBtn').click();
+                }
+            });
+        }
+        
+        function logout() {
+            sessionStorage.removeItem('adminAuth');
+            render();
+        }
+        
+        function render() {
+            if (checkAuth()) {
+                renderAdminPanel();
+            } else {
+                login();
+            }
+        }
+        
+        function renderAdminPanel() {
+            const container = document.getElementById('adminApp');
+            container.innerHTML = `
+                <div class="container">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h1>🔧 Админ-панель Mpack</h1>
+                        <button class="logout-btn" id="logoutBtn">🚪 Выйти</button>
+                    </div>
+                    
+                    <!-- ТЕКУЩИЕ ПАКИ -->
+                    <div class="card">
+                        <h2>📦 Твои текстур-паки (сейчас на сайте)</h2>
+                        <div id="packList"></div>
+                    </div>
+                    
+                    <!-- ГАЙД ПО pack.html -->
+                    <div class="card">
+                        <h2>📄 Как работает pack.html (страница подробностей)</h2>
+                        <p><code>pack.html</code> — это шаблон, который показывает детальную информацию о каждом текстур-паке.</p>
+                        
+                        <h3>🔍 Как он получает данные?</h3>
+                        <p>При клике на "Подробнее" из <code>index.html</code> передаётся ID пака в URL: <code>pack.html?id=1</code>. Скрипт находит пак с таким ID в <code>data.js</code> и показывает его.</p>
+                        
+                        <h3>📝 Что нужно заполнить в data.js для pack.html?</h3>
+                        <pre>{
+    id: 1,
+    title: "Название",
+    shortDesc: "Краткое описание (на главной)",
+    fullDesc: "Полное описание (на странице пака)",  // ← ЭТО ВАЖНО!
+    version: "1.20.x",
+    resolution: "x16",
+    preview: "textures/Название/preview.jpg",
+    zipFile: "textures/Название/Название.zip",
+    screenshots: [                         // ← массив путей к скринам
+        "textures/Название/screenshots/1.jpg",
+        "textures/Название/screenshots/2.jpg"
+    ]
+}</pre>
+                        
+                        <div class="warning">
+                            💡 <strong>Важно:</strong> Если <code>screenshots: []</code> (пустой массив), на странице пака будет надпись "Скриншоты появятся скоро (Soon)".
+                        </div>
+                        
+                        <h3>🖼️ Как добавить скриншоты на страницу пака?</h3>
+                        <div class="step">1. Создай папку <code>screenshots</code> внутри папки текстур-пака</div>
+                        <div class="step">2. Положи туда картинки (формат JPG/PNG)</div>
+                        <div class="step">3. В <code>data.js</code> добавь пути в массив <code>screenshots</code></div>
+                        <div class="step">4. Пример: <code>"textures/Название/screenshots/1.jpg"</code></div>
+                        <div class="step">5. Обнови страницу — скриншоты появятся, по клику увеличиваются</div>
+                    </div>
+                    
+                    <!-- ГАЙД ПО data.js -->
+                    <div class="card">
+                        <h2>📝 Шаблон для data.js (копируй и вставляй)</h2>
+                        <pre>{
+    id: 3,
+    title: "Название пака",
+    shortDesc: "Краткое описание для главной",
+    fullDesc: "Полное описание. Распиши подробно, что меняет пак, стиль, особенности, версии Minecraft.",
+    version: "1.20.x, 1.19.x",
+    resolution: "x32",
+    preview: "textures/Название/preview.jpg",
+    zipFile: "textures/Название/Название.zip",
+    screenshots: [
+        "textures/Название/screenshots/1.jpg",
+        "textures/Название/screenshots/2.jpg"
+    ]
+}</pre>
+                        <p><strong>⚠️ Если нет скриншотов:</strong> оставь <code>screenshots: []</code></p>
+                    </div>
+                    
+                    <!-- СТРУКТУРА ПАПОК -->
+                    <div class="card">
+                        <h2>📁 Правильная структура папок</h2>
+                        <pre>мой сайт/
+├── index.html
+├── pack.html
+├── admin.html
+├── data.js
+└── textures/
+    └── НазваниеПака/
+        ├── НазваниеПака.zip
+        ├── preview.jpg
+        └── screenshots/       ← создай эту папку (если есть скрины)
+            ├── 1.jpg
+            └── 2.jpg</pre>
+                    </div>
+                    
+                    <!-- КАК ДОБАВИТЬ НОВЫЙ ПАК -->
+                    <div class="card">
+                        <h2>➕ Как добавить новый текстур-пак</h2>
+                        <div class="step"><strong>Шаг 1.</strong> Открой <code>data.js</code> в блокноте</div>
+                        <div class="step"><strong>Шаг 2.</strong> Скопируй шаблон выше и вставь в конец списка (перед <code>];</code>)</div>
+                        <div class="step"><strong>Шаг 3.</strong> Измени все данные (id, title, shortDesc, fullDesc, version, resolution)</div>
+                        <div class="step"><strong>Шаг 4.</strong> Создай папку в <code>textures/</code> с названием пака</div>
+                        <div class="step"><strong>Шаг 5.</strong> Положи туда ZIP-файл и картинку <code>preview.jpg</code></div>
+                        <div class="step"><strong>Шаг 6.</strong> Если есть скриншоты — создай папку <code>screenshots</code> и положи их туда</div>
+                        <div class="step"><strong>Шаг 7.</strong> Сохрани <code>data.js</code> и обнови сайт</div>
+                    </div>
+                    
+                    <!-- КАК УДАЛИТЬ/ИЗМЕНИТЬ -->
+                    <div class="card">
+                        <h2>✏️ Как изменить или удалить пак</h2>
+                        <p><strong>Изменить:</strong> открой <code>data.js</code> и отредактируй нужные поля</p>
+                        <p><strong>Удалить:</strong> удали ВЕСЬ блок этого пака (от <code>{</code> до <code>},</code>)</p>
+                        <p><strong>Обновить ZIP:</strong> просто замени файл (имя оставь тем же)</p>
+                        <p><strong>Сменить картинку:</strong> замени <code>preview.jpg</code> на новую</p>
+                        <p><strong>Добавить скриншоты:</strong> создай папку <code>screenshots</code> и добавь пути в массив</p>
+                    </div>
+                    
+                    <!-- ПОЛЕЗНЫЕ СОВЕТЫ -->
+                    <div class="card">
+                        <h2>💡 Полезные советы</h2>
+                        <ul style="margin-left: 20px; line-height: 1.6;">
+                            <li>✅ <code>fullDesc</code> — это то, что увидит пользователь на странице пака</li>
+                            <li>✅ <code>shortDesc</code> — краткое описание на главной странице</li>
+                            <li>✅ Если скриншотов нет — оставь <code>screenshots: []</code>, появится надпись "Soon"</li>
+                            <li>✅ Скриншоты можно кликать — они увеличиваются на весь экран</li>
+                            <li>✅ Названия папок и файлов не должны содержать пробелов</li>
+                            <li>✅ После изменения <code>data.js</code> нажми Ctrl+F5 для полного обновления</li>
+                        </ul>
+                    </div>
+                    
+                    <button id="backToSiteBtn">← На главную Mpack</button>
+                </div>
+            `;
+            
+            // Показываем список текущих паков
+            if (typeof texturePacks !== 'undefined' && texturePacks.length > 0) {
+                const packListDiv = document.getElementById('packList');
+                let html = '<table><tr><th>ID</th><th>Название</th><th>Версия</th><th>Скриншоты</th></tr>';
+                texturePacks.forEach(pack => {
+                    const hasScreenshots = pack.screenshots && pack.screenshots.length > 0;
+                    html += `
+                        <tr>
+                            <td>${pack.id}</td>
+                            <td><strong>${pack.title}</strong></td>
+                            <td>${pack.version}</td>
+                            <td>${hasScreenshots ? '✅ ' + pack.screenshots.length + ' шт.' : '❌ (будет Soon)'}</td>
+                        </tr>
+                    `;
+                });
+                html += '</table>';
+                packListDiv.innerHTML = html;
+            } else {
+                document.getElementById('packList').innerHTML = '<p style="color: #888;">📭 Нет текстур-паков. Добавь первый!</p>';
+            }
+            
+            document.getElementById('logoutBtn').addEventListener('click', logout);
+            document.getElementById('backToSiteBtn').addEventListener('click', () => {
+                window.location.href = 'index.html';
+            });
+        }
+        
+        render();
+    </script>
+</body>
+</html>

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mpack — Детали ресурс-пака</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            background: #f3f3f3;
+            color: #1a1a1a;
+            padding: 30px 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #0078d7;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .pack-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .pack-header {
+            position: relative;
+            height: 300px;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .pack-header-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+            padding: 30px;
+            color: white;
+        }
+
+        .pack-header-overlay h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+
+        .pack-meta {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .pack-meta span {
+            background: rgba(255,255,255,0.2);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .pack-content {
+            padding: 30px;
+        }
+
+        .description {
+            margin-bottom: 30px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .description h2 {
+            font-size: 1.3rem;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .download-section {
+            background: #f8f8f8;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .download-btn {
+            display: inline-block;
+            background: #0078d7;
+            color: white;
+            padding: 14px 35px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .download-btn:hover {
+            background: #106ebe;
+        }
+
+        .screenshots-section {
+            margin-top: 30px;
+        }
+
+        .screenshots-section h2 {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .screenshots-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .screenshot {
+            background: #f8f8f8;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .screenshot:hover {
+            transform: scale(1.02);
+        }
+
+        .screenshot img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+
+        .soon-placeholder {
+            background: #f0f0f0;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            color: #999;
+            font-style: italic;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+
+        .error-message {
+            text-align: center;
+            padding: 50px;
+            color: #d32f2f;
+            background: white;
+            border-radius: 12px;
+        }
+
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #999;
+            font-size: 0.8rem;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .modal img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .pack-header { height: 200px; }
+            .pack-header-overlay h1 { font-size: 1.5rem; }
+            .pack-content { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Назад к списку паков</a>
+
+        <div id="packContainer">
+            <div class="loading">⏳ Загрузка...</div>
+        </div>
+
+        <div class="footer">
+            <p>⚡ Mpack — все текстур-паки бесплатны</p>
+        </div>
+    </div>
+
+    <div id="modal" class="modal">
+        <img id="modalImage" src="" alt="Screenshot">
+    </div>
+
+    <script src="data.js"></script>
+    <script>
+        const container = document.getElementById('packContainer');
+        const modal = document.getElementById('modal');
+        const modalImage = document.getElementById('modalImage');
+
+        // Функция для отображения пака
+        function displayPack(pack) {
+            if (!pack) {
+                container.innerHTML = `
+                    <div class="error-message">
+                        ❌ Пак не найден<br>
+                        <small>Проверь ID в ссылке или обнови data.js</small>
+                        <br><br>
+                        <a href="index.html" style="color: #0078d7;">← Вернуться на главную</a>
+                    </div>
+                `;
+                return;
+            }
+
+            const hasScreenshots = pack.screenshots && pack.screenshots.length > 0;
+            
+            let screenshotsHtml = '';
+            if (hasScreenshots) {
+                screenshotsHtml = `
+                    <div class="screenshots-section">
+                        <h2>📸 Скриншоты</h2>
+                        <div class="screenshots-grid" id="screenshotsGrid"></div>
+                    </div>
+                `;
+            } else {
+                screenshotsHtml = `
+                    <div class="screenshots-section">
+                        <h2>📸 Скриншоты</h2>
+                        <div class="soon-placeholder">
+                            🖼️ Скриншоты появятся скоро (Soon)
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = `
+                <div class="pack-card">
+                    <div class="pack-header" style="background-image: url('${pack.preview}')">
+                        <div class="pack-header-overlay">
+                            <h1>${pack.title}</h1>
+                            <div class="pack-meta">
+                                <span>📌 Minecraft ${pack.version}</span>
+                                <span>🎨 Разрешение: ${pack.resolution}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pack-content">
+                        <div class="description">
+                            <h2>📖 Описание</h2>
+                            <p>${pack.fullDesc || pack.shortDesc || "Нет описания"}</p>
+                        </div>
+                        <div class="download-section">
+                            <a href="${pack.zipFile}" class="download-btn" download>⬇️ Скачать ${pack.title}</a>
+                        </div>
+                        ${screenshotsHtml}
+                    </div>
+                </div>
+            `;
+
+            if (hasScreenshots) {
+                const gridContainer = document.getElementById('screenshotsGrid');
+                pack.screenshots.forEach(screenshotUrl => {
+                    const div = document.createElement('div');
+                    div.className = 'screenshot';
+                    div.innerHTML = `<img src="${screenshotUrl}" alt="Screenshot" onerror="this.src='https://placehold.co/400x200/f0f0f0/999?text=Image+Not+Found'">`;
+                    div.addEventListener('click', () => {
+                        modalImage.src = screenshotUrl;
+                        modal.style.display = 'flex';
+                    });
+                    gridContainer.appendChild(div);
+                });
+            }
+        }
+
+        // Ждём загрузки data.js и показываем пак
+        function waitForDataAndDisplay() {
+            // Проверяем, загрузился ли texturePacks
+            if (typeof texturePacks !== 'undefined' && texturePacks.length > 0) {
+                // Получаем ID из URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const packId = parseInt(urlParams.get('id'));
+                
+                // Ищем пак по ID
+                const pack = texturePacks.find(p => p.id === packId);
+                displayPack(pack);
+            } else {
+                // Если ещё не загрузилось, ждём 100мс и проверяем снова
+                setTimeout(waitForDataAndDisplay, 100);
+            }
+        }
+
+        // Запускаем ожидание
+        waitForDataAndDisplay();
+
+        // Закрытие модалки по клику
+        modal.addEventListener('click', () => {
+            modal.style.display = 'none';
+            modalImage.src = '';
+        });
+    </script>
+</body>
+</html>
